@@ -1,6 +1,2 @@
-# TODO
-- Home page with input autofocus
-- Paste and enter to start process
-- Wait and show dark mode pdf
-
-# DONE
+- [ ] Add pdf upload
+- [ ] For URL, add it as query param to allow refresh (somehow allow reset)
