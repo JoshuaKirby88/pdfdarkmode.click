@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
+import { PDFDARKMODE_URL } from "@/config"
 import { cn } from "@/lib/utils"
 import { ThemeProvider } from "./_components/theme-provider"
 
@@ -15,8 +16,17 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-	title: "PDF Dark Mode",
+	title: "PDF to Dark Mode",
 	description: "Convert PDF to Dark Mode.",
+	keywords: ["PDF convert", "dark mode", "PDF", "online"],
+	openGraph: {
+		title: "PDF to Dark Mode",
+		description: "Convert PDF to Dark Mode.",
+		url: PDFDARKMODE_URL,
+		siteName: "PDF to Dark Mode",
+		locale: "en_US",
+		type: "website",
+	},
 }
 
 const Layout = (props: { children: React.ReactNode }) => (

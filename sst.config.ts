@@ -26,6 +26,7 @@ export default $config({
 			dev: {
 				command: "pnpm exec next dev --turbo",
 			},
+			domain: "pdfdarkmode.click",
 		})
 	},
 })
