@@ -1,4 +1,3 @@
-import { Spinner } from "@/components/spinner"
 import { useState } from "react"
 import { pdfjs } from "react-pdf"
 import { Document, Page } from "react-pdf"
@@ -20,18 +19,8 @@ export const PDFCanvas = (props: { pdfLink: string }) => {
 	}
 
 	return (
-		<div className="absolute inset-0 overflow-auto invert">
-			<Document
-				file={props.pdfLink}
-				onLoadSuccess={onLoadSuccess}
-				options={documentOptions}
-				loading={
-					<div className="absolute inset-0 flex items-center justify-center">
-						<Spinner />
-					</div>
-				}
-				className="flex flex-col items-center"
-			>
+		<div className="absolute inset-0 overflow-auto dark:invert">
+			<Document file={props.pdfLink} onLoadSuccess={onLoadSuccess} options={documentOptions} className="flex flex-col items-center">
 				{Array(pages)
 					.fill(0)
 					.map((_, i) => (
