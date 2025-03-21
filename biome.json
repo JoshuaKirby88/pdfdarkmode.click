@@ -7,7 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": ["./sst-env.d.ts", "./pnpm-lock.yaml", "./.next/**", "./.sst/**"]
+		"ignore": ["./sst-env.d.ts", "./pnpm-lock.yaml", "./.next/**", "./.sst/**", "./.open-next/**"]
 	},
 	"formatter": {
 		"enabled": true,
