@@ -20,7 +20,7 @@ export const PDFCanvas = (props: { pdfLink: string }) => {
 
 	return (
 		<div className="absolute inset-0 overflow-auto dark:invert">
-			<Document file={props.pdfLink} onLoadSuccess={onLoadSuccess} options={documentOptions} className="flex flex-col items-center">
+			<Document file={props.pdfLink} onLoadSuccess={onLoadSuccess} options={documentOptions} loading="" className="flex flex-col items-center">
 				{Array(pages)
 					.fill(0)
 					.map((_, i) => (
