@@ -10,17 +10,27 @@
 	"observability": {
 		"enabled": true,
 		"logs": {
-			"enabled": false
-		}
+			"enabled": false,
+		},
 	},
 	"assets": {
 		"directory": ".open-next/assets",
-		"binding": "ASSETS"
+		"binding": "ASSETS",
 	},
 	"services": [
 		{
 			"binding": "WORKER_SELF_REFERENCE",
-			"service": "pdf-dark-mode"
-		}
-	]
+			"service": "pdf-dark-mode",
+		},
+	],
+	"routes": [
+		{
+			"pattern": "pdfdarkmode.click",
+			"custom_domain": true,
+		},
+		{
+			"pattern": "www.pdfdarkmode.click",
+			"custom_domain": true,
+		},
+	],
 }
