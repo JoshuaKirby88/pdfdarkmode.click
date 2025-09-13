@@ -32,5 +32,10 @@
 			"pattern": "www.pdfdarkmode.click",
 			"custom_domain": true
 		}
-	]
+	],
+	"vars": {
+		"NEXT_PUBLIC_POSTHOG_KEY": "phc_WqmzoL1mjbY7HS5qTwTQe8m00wOyUkt6JT26n4UdXSW",
+		"NEXT_PUBLIC_POSTHOG_HOST": "/anonymous-hedgehog",
+		"NEXT_PUBLIC_GITHUB_URL": "https://github.com/JoshuaKirby88/pdfdarkmode.click"
+	}
 }
