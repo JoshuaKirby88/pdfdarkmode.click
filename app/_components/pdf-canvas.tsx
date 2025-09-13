@@ -16,6 +16,28 @@ const config = {
 	},
 }
 
+const getFilenameFromUrlString = (input: string): string | null => {
+	try {
+		const url = new URL(input, window.location.href)
+		const last = url.pathname.split("/").pop() || ""
+		return last ? decodeURIComponent(last) : null
+	} catch {
+		const cleaned = input.split("?")[0].split("#")[0]
+		const last = cleaned.split("/").pop() || ""
+		return last ? decodeURIComponent(last) : null
+	}
+}
+
+const deriveTitle = (source: File | string): string | null => {
+	if (source instanceof File) {
+		return source.name
+	}
+	if (typeof source === "string" && !source.startsWith("data:")) {
+		return getFilenameFromUrlString(source)
+	}
+	return null
+}
+
 export const PDFCanvas = (props: { pdf: File | string }) => {
 	const [pages, setPages] = useState(0)
 	const [width] = useState(Math.min(config.width, window.innerWidth))
@@ -31,22 +53,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	}
 
 	const setDocumentTitle = () => {
-		let title: string | null = null
-
-		if (props.pdf instanceof File) {
-			title = props.pdf.name
-		} else if (typeof props.pdf === "string" && !props.pdf.startsWith("data:")) {
-			try {
-				const url = new URL(props.pdf, window.location.href)
-				const last = url.pathname.split("/").pop() || ""
-				title = last ? decodeURIComponent(last) : null
-			} catch {
-				const cleaned = props.pdf.split("?")[0].split("#")[0]
-				const last = cleaned.split("/").pop() || ""
-				title = last ? decodeURIComponent(last) : null
-			}
-		}
-
+		const title = deriveTitle(props.pdf)
 		if (title?.trim()) {
 			document.title = title
 		}
@@ -64,8 +71,8 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 				onSourceError={onError}
 				options={config.documentOptions}
 			>
-				{new Array(pages).fill(0).map((_, i) => (
-					<Page key={i} pageNumber={i + 1} width={width} />
+				{Array.from({ length: pages }, (_, index) => index + 1).map(pageNumber => (
+					<Page key={`page-${pageNumber}`} pageNumber={pageNumber} width={width} />
 				))}
 			</Document>
 		</div>
