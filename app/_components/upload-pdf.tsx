@@ -8,15 +8,16 @@ import { FormInput } from "@/components/form/form-input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useFileUpload } from "@/hooks/use-file-upload"
+import { usePDFZustand } from "@/zustand/pdf-zustand"
 
-export const UploadPDF = (props: { setPDF: (input: File | string) => void }) => {
+export const UploadPDF = () => {
 	const schema = z.object({ link: z.string().optional() })
 	const form = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) })
-	const [_, { openFileDialog, getInputProps }] = useFileUpload({ accept: ".pdf", onFilesAdded: addedFiles => props.setPDF(addedFiles[0].file as File) })
+	const [_, { openFileDialog, getInputProps }] = useFileUpload({ accept: ".pdf", onFilesAdded: addedFiles => usePDFZustand.setState({ pdf: addedFiles[0].file as File }) })
 
 	const onSubmit = (input: z.infer<typeof schema>) => {
 		if (input.link && input.link.trim().length > 0) {
-			props.setPDF(input.link)
+			usePDFZustand.setState({ pdf: input.link })
 		}
 	}
 

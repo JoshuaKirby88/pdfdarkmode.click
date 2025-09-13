@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
+import { Toaster } from "@/components/ui/sonner"
 import { PDFDARKMODE_URL } from "@/config"
 import { cn } from "@/lib/utils"
 import { PostHogProvider } from "./_components/posthog-provider"
@@ -36,6 +37,8 @@ const Layout = (props: { children: React.ReactNode }) => (
 			<PostHogProvider>
 				<ThemeProvider attribute="class" defaultTheme="system" disableTransitionOnChange enableSystem>
 					{props.children}
+
+					<Toaster />
 				</ThemeProvider>
 			</PostHogProvider>
 		</body>
