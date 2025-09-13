@@ -1,8 +1,8 @@
 - [x] Add posthog
 - [x] Add pdf upload
+- [x] Add .env.examples
 - [ ] Add private pdf url support
 - [ ] Add proper zoom
 - [ ] Remember last pdf
 - [ ] For URL, add it as query param to allow refresh (somehow allow reset)
-- [ ] Add .env.examples
 - [ ] Set pdf file name as website title
