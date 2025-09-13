@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { PDFDARKMODE_URL } from "@/config"
 import { cn } from "@/lib/utils"
+import { PostHogProvider } from "./_components/posthog-provider"
 import { ThemeProvider } from "./_components/theme-provider"
 
 const geistSans = Geist({
@@ -32,9 +33,11 @@ export const metadata: Metadata = {
 const Layout = (props: { children: React.ReactNode }) => (
 	<html lang="en">
 		<body className={cn(geistSans.variable, geistMono.variable, "antialiased")}>
-			<ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-				{props.children}
-			</ThemeProvider>
+			<PostHogProvider>
+				<ThemeProvider attribute="class" defaultTheme="system" disableTransitionOnChange enableSystem>
+					{props.children}
+				</ThemeProvider>
+			</PostHogProvider>
 		</body>
 	</html>
 )

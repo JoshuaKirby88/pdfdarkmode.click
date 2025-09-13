@@ -1,4 +1,4 @@
-- [ ] Add posthog
+- [x] Add posthog
 - [ ] Add pdf upload
 - [ ] Add private pdf url support
 - [ ] Add proper zoom
