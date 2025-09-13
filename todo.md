@@ -4,3 +4,4 @@
 - [ ] Add proper zoom
 - [ ] Remember last pdf
 - [ ] For URL, add it as query param to allow refresh (somehow allow reset)
+- [ ] Add .env.examples
