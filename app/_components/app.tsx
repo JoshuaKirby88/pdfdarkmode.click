@@ -2,12 +2,12 @@
 
 import dynamic from "next/dynamic"
 import { useState } from "react"
-import { PDFLinkInput } from "./pdf-link-input"
+import { UploadPDF } from "./upload-pdf"
 
 const DynamicPDFCanvas = dynamic(() => import("./pdf-canvas").then(mod => mod.PDFCanvas))
 
 export const App = () => {
-	const [pdfLink, setPDFLink] = useState("")
+	const [pdf, setPDF] = useState<File | string | null>(null)
 
-	return <>{!pdfLink ? <PDFLinkInput setPDFLink={setPDFLink} /> : <DynamicPDFCanvas pdfLink={pdfLink} />}</>
+	return <>{pdf ? <DynamicPDFCanvas fileOrUrl={pdf} /> : <UploadPDF setPDF={setPDF} />}</>
 }
