@@ -282,12 +282,12 @@ interface ServiceWorkerGlobalScope extends WorkerGlobalScope {
 declare function addEventListener<Type extends keyof WorkerGlobalScopeEventMap>(
 	type: Type,
 	handler: EventListenerOrEventListenerObject<WorkerGlobalScopeEventMap[Type]>,
-	options?: EventTargetAddEventListenerOptions | boolean,
+	options?: EventTargetAddEventListenerOptions | boolean
 ): void
 declare function removeEventListener<Type extends keyof WorkerGlobalScopeEventMap>(
 	type: Type,
 	handler: EventListenerOrEventListenerObject<WorkerGlobalScopeEventMap[Type]>,
-	options?: EventTargetEventListenerOptions | boolean,
+	options?: EventTargetEventListenerOptions | boolean
 ): void
 /**
  * Dispatches a synthetic event event to target and returns true if either event's cancelable attribute value is false or its preventDefault() method was not invoked, and false otherwise.
@@ -355,7 +355,7 @@ interface ExecutionContext {
 type ExportedHandlerFetchHandler<Env = unknown, CfHostMetadata = unknown> = (
 	request: Request<CfHostMetadata, IncomingRequestCfProperties<CfHostMetadata>>,
 	env: Env,
-	ctx: ExecutionContext,
+	ctx: ExecutionContext
 ) => Response | Promise<Response>
 type ExportedHandlerTailHandler<Env = unknown> = (events: TraceItem[], env: Env, ctx: ExecutionContext) => void | Promise<void>
 type ExportedHandlerTraceHandler<Env = unknown> = (traces: TraceItem[], env: Env, ctx: ExecutionContext) => void | Promise<void>
@@ -901,7 +901,7 @@ declare abstract class SubtleCrypto {
 		baseKey: CryptoKey,
 		derivedKeyAlgorithm: string | SubtleCryptoImportKeyAlgorithm,
 		extractable: boolean,
-		keyUsages: string[],
+		keyUsages: string[]
 	): Promise<CryptoKey>
 	/* [MDN Reference](https://developer.mozilla.org/docs/Web/API/SubtleCrypto/deriveBits) */
 	deriveBits(algorithm: string | SubtleCryptoDeriveKeyAlgorithm, baseKey: CryptoKey, length?: number | null): Promise<ArrayBuffer>
@@ -919,7 +919,7 @@ declare abstract class SubtleCrypto {
 		unwrapAlgorithm: string | SubtleCryptoEncryptAlgorithm,
 		unwrappedKeyAlgorithm: string | SubtleCryptoImportKeyAlgorithm,
 		extractable: boolean,
-		keyUsages: string[],
+		keyUsages: string[]
 	): Promise<CryptoKey>
 	timingSafeEqual(a: ArrayBuffer | ArrayBufferView, b: ArrayBuffer | ArrayBufferView): boolean
 }
@@ -1478,7 +1478,7 @@ interface KVNamespace<Key extends string = string> {
 	getWithMetadata<Metadata = unknown>(key: Array<Key>, options?: KVNamespaceGetOptions<"text">): Promise<Map<string, KVNamespaceGetWithMetadataResult<string, Metadata>>>
 	getWithMetadata<ExpectedValue = unknown, Metadata = unknown>(
 		key: Array<Key>,
-		options?: KVNamespaceGetOptions<"json">,
+		options?: KVNamespaceGetOptions<"json">
 	): Promise<Map<string, KVNamespaceGetWithMetadataResult<ExpectedValue, Metadata>>>
 	delete(key: Key): Promise<void>
 }
@@ -1562,7 +1562,7 @@ declare abstract class R2Bucket {
 		key: string,
 		options: R2GetOptions & {
 			onlyIf: R2Conditional | Headers
-		},
+		}
 	): Promise<R2ObjectBody | R2Object | null>
 	get(key: string, options?: R2GetOptions): Promise<R2ObjectBody | null>
 	put(
@@ -1570,7 +1570,7 @@ declare abstract class R2Bucket {
 		value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null | Blob,
 		options?: R2PutOptions & {
 			onlyIf: R2Conditional | Headers
-		},
+		}
 	): Promise<R2Object | null>
 	put(key: string, value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null | Blob, options?: R2PutOptions): Promise<R2Object>
 	createMultipartUpload(key: string, options?: R2MultipartOptions): Promise<R2MultipartUpload>
@@ -3777,7 +3777,7 @@ declare abstract class Ai<AiModelList extends AiModelListType = AiModels> {
 	run<Name extends keyof AiModelList, Options extends AiOptions>(
 		model: Name,
 		inputs: AiModelList[Name]["inputs"],
-		options?: Options,
+		options?: Options
 	): Promise<
 		Options extends {
 			returnRawResponse: true
@@ -3794,7 +3794,7 @@ declare abstract class Ai<AiModelList extends AiModelListType = AiModels> {
 		options?: {
 			gateway?: GatewayOptions
 			extraHeaders?: object
-		},
+		}
 	): Promise<ConversionResponse[]>
 	toMarkdown(
 		files: {
@@ -3804,7 +3804,7 @@ declare abstract class Ai<AiModelList extends AiModelListType = AiModels> {
 		options?: {
 			gateway?: GatewayOptions
 			extraHeaders?: object
-		},
+		}
 	): Promise<ConversionResponse>
 }
 type GatewayRetries = {
@@ -3916,7 +3916,7 @@ declare abstract class AiGateway {
 		options?: {
 			gateway?: GatewayOptions
 			extraHeaders?: object
-		},
+		}
 	): Promise<Response>
 	getUrl(provider?: AIGatewayProviders | string): Promise<string> // eslint-disable-line
 }
@@ -5045,12 +5045,8 @@ declare abstract class D1PreparedStatement {
 	first<T = Record<string, unknown>>(): Promise<T | null>
 	run<T = Record<string, unknown>>(): Promise<D1Result<T>>
 	all<T = Record<string, unknown>>(): Promise<D1Result<T>>
-	raw<T = unknown[]>(options: {
-		columnNames: true
-	}): Promise<[string[], ...T[]]>
-	raw<T = unknown[]>(options?: {
-		columnNames?: false
-	}): Promise<T[]>
+	raw<T = unknown[]>(options: { columnNames: true }): Promise<[string[], ...T[]]>
+	raw<T = unknown[]>(options?: { columnNames?: false }): Promise<T[]>
 }
 // `Disposable` was added to TypeScript's standard lib types in version 5.2.
 // To support older TypeScript versions, define an empty `Disposable` interface.
@@ -5323,7 +5319,7 @@ type EventContext<Env, P extends string, Data> = {
 	data: Data
 }
 type PagesFunction<Env = unknown, Params extends string = any, Data extends Record<string, unknown> = Record<string, unknown>> = (
-	context: EventContext<Env, Params, Data>,
+	context: EventContext<Env, Params, Data>
 ) => Response | Promise<Response>
 type EventPluginContext<Env, P extends string, Data, PluginArgs> = {
 	request: Request<unknown, IncomingRequestCfProperties<unknown>>
@@ -5341,7 +5337,7 @@ type EventPluginContext<Env, P extends string, Data, PluginArgs> = {
 	pluginArgs: PluginArgs
 }
 type PagesPluginFunction<Env = unknown, Params extends string = any, Data extends Record<string, unknown> = Record<string, unknown>, PluginArgs = unknown> = (
-	context: EventPluginContext<Env, Params, Data, PluginArgs>,
+	context: EventPluginContext<Env, Params, Data, PluginArgs>
 ) => Response | Promise<Response>
 declare module "assets:*" {
 	export const onRequest: PagesFunction
@@ -5642,7 +5638,7 @@ declare module "cloudflare:workers" {
 			options: {
 				type: string
 				timeout?: WorkflowTimeoutDuration | number
-			},
+			}
 		): Promise<WorkflowStepEvent<T>>
 	}
 	export abstract class WorkflowEntrypoint<Env = unknown, T extends Rpc.Serializable<T> | unknown = unknown> implements Rpc.WorkflowEntrypointBranded {
@@ -6115,7 +6111,7 @@ interface DispatchNamespace {
 		args?: {
 			[key: string]: any
 		},
-		options?: DynamicDispatchOptions,
+		options?: DynamicDispatchOptions
 	): Fetcher
 }
 declare module "cloudflare:workflows" {
@@ -6201,11 +6197,5 @@ declare abstract class WorkflowInstance {
 	/**
 	 * Send an event to this instance.
 	 */
-	public sendEvent({
-		type,
-		payload,
-	}: {
-		type: string
-		payload: unknown
-	}): Promise<void>
+	public sendEvent({ type, payload }: { type: string; payload: unknown }): Promise<void>
 }
