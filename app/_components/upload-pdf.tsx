@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { UploadIcon } from "lucide-react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Form } from "@/components/form/form"
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useFileUpload } from "@/hooks/use-file-upload"
 import { usePDFZustand } from "@/zustand/pdf-zustand"
+
+const APPLE_PLATFORM_REGEX = /Mac|iPhone|iPad|iPod/i
 
 export const UploadPDF = () => {
 	const schema = z.object({ link: z.string().optional() })
@@ -21,16 +23,38 @@ export const UploadPDF = () => {
 		}
 	}
 
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			const isLetterU = event.key.toLowerCase() === "u"
+			const hasPrimaryModifier = event.metaKey || event.ctrlKey
+			const hasDisallowedModifiers = event.altKey || event.shiftKey
+			if (isLetterU && hasPrimaryModifier && !hasDisallowedModifiers) {
+				event.preventDefault()
+				openFileDialog()
+			}
+		}
+
+		window.addEventListener("keydown", handleKeyDown)
+		return () => window.removeEventListener("keydown", handleKeyDown)
+	}, [openFileDialog])
+
+	const isMac = useMemo(() => {
+		if (typeof navigator === "undefined") {
+			return false
+		}
+		return APPLE_PLATFORM_REGEX.test(navigator.platform)
+	}, [])
+
 	return (
 		<Form {...form} className="w-full max-w-lg flex-row items-end gap-2" onSubmit={onSubmit}>
 			<FormInput autoFocus name="link" placeholder="URL to a public PDF" />
 			<FormButton className="w-fit">Open ↵</FormButton>
 
-			<Separator orientation="vertical" />
+			<Separator className="mx-2" orientation="vertical" />
 
 			<Button onClick={openFileDialog}>
 				Upload
-				<UploadIcon />
+				{isMac ? " ⌘U" : " Ctrl U"}
 			</Button>
 			<input {...getInputProps()} className="sr-only" tabIndex={-1} />
 		</Form>
