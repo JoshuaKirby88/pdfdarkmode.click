@@ -2,9 +2,9 @@
 - [x] Add pdf upload
 - [x] Add .env.examples
 - [x] Handle invalid url
+- [x] Link to Github repo
 - [ ] Set pdf file name as website title
 - [ ] Add private pdf url support
 - [ ] Add proper zoom
 - [ ] Remember last pdf
 - [ ] For URL, add it as query param to allow refresh (somehow allow reset)
-- [ ] Link to Github repo
