@@ -22,11 +22,34 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 
 	const onLoadSuccess = (input: { numPages: number }) => {
 		setPages(input.numPages)
+		setDocumentTitle()
 	}
 
 	const onError = (err: Error) => {
 		toast.error(err.message)
 		usePDFZustand.setState({ pdf: null })
+	}
+
+	const setDocumentTitle = () => {
+		let title: string | null = null
+
+		if (props.pdf instanceof File) {
+			title = props.pdf.name
+		} else if (typeof props.pdf === "string" && !props.pdf.startsWith("data:")) {
+			try {
+				const url = new URL(props.pdf, window.location.href)
+				const last = url.pathname.split("/").pop() || ""
+				title = last ? decodeURIComponent(last) : null
+			} catch {
+				const cleaned = props.pdf.split("?")[0].split("#")[0]
+				const last = cleaned.split("/").pop() || ""
+				title = last ? decodeURIComponent(last) : null
+			}
+		}
+
+		if (title?.trim()) {
+			document.title = title
+		}
 	}
 
 	return (
