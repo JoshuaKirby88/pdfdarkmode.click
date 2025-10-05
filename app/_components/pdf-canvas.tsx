@@ -10,7 +10,6 @@ import { toast } from "sonner"
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString()
 
 const config = {
-	width: 1200,
 	documentOptions: {
 		cMapUrl: "/cmaps/",
 	},
@@ -40,12 +39,17 @@ const deriveTitle = (source: File | string): string | null => {
 
 export const PDFCanvas = (props: { pdf: File | string }) => {
 	const [pages, setPages] = useState(0)
-	const [width, setWidth] = useState(Math.min(config.width, window.innerWidth))
+	const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight })
+	const [pageDims, setPageDims] = useState<Record<number, { width: number; height: number }>>({})
 	useEffect(() => {
-		const update = () => setWidth(Math.min(config.width, window.innerWidth))
+		const update = () => setViewport({ width: window.innerWidth, height: window.innerHeight })
 		update()
 		window.addEventListener("resize", update)
-		return () => window.removeEventListener("resize", update)
+		window.addEventListener("orientationchange", update)
+		return () => {
+			window.removeEventListener("resize", update)
+			window.removeEventListener("orientationchange", update)
+		}
 	}, [])
 
 	const onLoadSuccess = (input: { numPages: number }) => {
@@ -66,7 +70,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	}
 
 	return (
-		<div className="absolute inset-0 overflow-auto dark:invert">
+		<div className="absolute inset-0 snap-y snap-mandatory overflow-auto dark:invert">
 			<Document
 				className="flex flex-col items-center"
 				error={null}
@@ -77,9 +81,25 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 				onSourceError={onError}
 				options={config.documentOptions}
 			>
-				{Array.from({ length: pages }, (_, index) => index + 1).map(pageNumber => (
-					<Page key={`page-${pageNumber}`} pageNumber={pageNumber} width={width} />
-				))}
+				{Array.from({ length: pages }, (_, index) => index + 1).map(pageNumber => {
+					const dims = pageDims[pageNumber]
+					const fitWidth = dims ? Math.min(viewport.width, (viewport.height * dims.width) / dims.height) : Math.min(viewport.width, viewport.height)
+					return (
+						<div className="flex h-screen w-screen snap-start items-center justify-center overflow-hidden" key={`page-${pageNumber}`}>
+							<Page
+								onLoadSuccess={(page: any) => {
+									const vp = page.getViewport({ scale: 1 })
+									setPageDims(prev => ({
+										...prev,
+										[pageNumber]: { width: vp.width, height: vp.height },
+									}))
+								}}
+								pageNumber={pageNumber}
+								width={Math.floor(fitWidth)}
+							/>
+						</div>
+					)
+				})}
 			</Document>
 		</div>
 	)
