@@ -1,0 +1,2 @@
+- When you want to notify me, or whenever you are done with a task, always run `terminal-notifier -message "{message here}" -sound Blow -sender com.apple.finder` in the terminal.
+- After updating a file to implement a change, you don't have to output the code again to me.

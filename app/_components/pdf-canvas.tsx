@@ -70,7 +70,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	}
 
 	return (
-		<div className="absolute inset-0 snap-y snap-mandatory overflow-auto dark:invert">
+		<div className="absolute inset-0 snap-y snap-mandatory overflow-auto bg-white dark:invert">
 			<Document
 				className="flex flex-col items-center"
 				error={null}
