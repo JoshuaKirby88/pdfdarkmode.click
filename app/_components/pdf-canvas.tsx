@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import { usePDFZustand } from "@/zustand/pdf-zustand"
 import "react-pdf/dist/Page/TextLayer.css"
 import "react-pdf/dist/esm/Page/AnnotationLayer.css"
 import { toast } from "sonner"
+import ExportPagesDialog from "./export-pages-dialog"
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString()
 
@@ -14,6 +15,10 @@ const config = {
 		cMapUrl: "/cmaps/",
 	},
 }
+
+const INTERSECTION_STEPS = 100
+type PageViewport = { width: number; height: number }
+type PageLike = { getViewport: (opts: { scale: number }) => PageViewport }
 
 const getFilenameFromUrlString = (input: string): string | null => {
 	try {
@@ -41,6 +46,10 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	const [pages, setPages] = useState(0)
 	const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight })
 	const [pageDims, setPageDims] = useState<Record<number, { width: number; height: number }>>({})
+	const setCurrentPage = usePDFZustand(state => state.setCurrentPage)
+
+	const rootRef = useRef<HTMLDivElement | null>(null)
+
 	useEffect(() => {
 		const update = () => setViewport({ width: window.innerWidth, height: window.innerHeight })
 		update()
@@ -51,6 +60,38 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 			window.removeEventListener("orientationchange", update)
 		}
 	}, [])
+
+	// Track visible/current page
+	useEffect(() => {
+		if (!rootRef.current) {
+			return
+		}
+		const container = rootRef.current
+		const elems = Array.from(container.querySelectorAll<HTMLElement>("[data-page]"))
+		const observer = new IntersectionObserver(
+			entries => {
+				let maxRatio = 0
+				let page: number | null = null
+				for (const entry of entries) {
+					if (entry.intersectionRatio > maxRatio) {
+						maxRatio = entry.intersectionRatio
+						const num = Number((entry.target as HTMLElement).dataset.page)
+						page = Number.isFinite(num) ? num : null
+					}
+				}
+				if (page !== null) {
+					setCurrentPage(page)
+				}
+			},
+			{ root: container, threshold: Array.from({ length: INTERSECTION_STEPS + 1 }, (_, i) => i / INTERSECTION_STEPS) }
+		)
+		for (const el of elems) {
+			observer.observe(el)
+		}
+		return () => {
+			observer.disconnect()
+		}
+	}, [setCurrentPage])
 
 	const onLoadSuccess = (input: { numPages: number }) => {
 		setPages(input.numPages)
@@ -70,7 +111,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	}
 
 	return (
-		<div className="absolute inset-0 snap-y snap-mandatory overflow-x-hidden overflow-y-scroll bg-white dark:invert">
+		<div className="absolute inset-0 snap-y snap-mandatory overflow-x-hidden overflow-y-scroll bg-white dark:invert" ref={rootRef}>
 			<Document
 				className="flex flex-col items-center"
 				error={null}
@@ -85,9 +126,9 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 					const dims = pageDims[pageNumber]
 					const fitWidth = dims ? Math.min(viewport.width, (viewport.height * dims.width) / dims.height) : Math.min(viewport.width, viewport.height)
 					return (
-						<div className="flex h-screen w-screen snap-start items-center justify-center overflow-hidden" key={`page-${pageNumber}`}>
+						<div className="flex h-screen w-screen snap-start items-center justify-center overflow-hidden" data-page={pageNumber} key={`page-${pageNumber}`}>
 							<Page
-								onLoadSuccess={(page: any) => {
+								onLoadSuccess={(page: PageLike) => {
 									const vp = page.getViewport({ scale: 1 })
 									setPageDims(prev => ({
 										...prev,
@@ -101,6 +142,8 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 					)
 				})}
 			</Document>
+
+			<ExportPagesDialog totalPages={pages} />
 		</div>
 	)
 }

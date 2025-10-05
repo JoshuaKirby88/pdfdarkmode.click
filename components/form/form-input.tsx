@@ -6,14 +6,14 @@ import { cn } from "@/lib/utils"
 
 type Props = { label?: string; name: string } & ComponentProps<typeof Input>
 
-export const FormInput = ({ className, ...props }: Props) => {
+export const FormInput = ({ className, label, name, ...rest }: Props) => {
 	const { register } = useFormContext()
 
 	return (
 		<div className={cn("w-full space-y-1", className)}>
-			{props.label && <Label>{props.label}</Label>}
+			{label && <Label>{label}</Label>}
 
-			<Input type="text" {...props} {...register(props.name)} />
+			<Input {...rest} {...register(name)} />
 		</div>
 	)
 }
