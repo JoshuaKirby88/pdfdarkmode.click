@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import { usePDFZustand } from "@/zustand/pdf-zustand"
 import "react-pdf/dist/Page/TextLayer.css"
@@ -40,7 +40,13 @@ const deriveTitle = (source: File | string): string | null => {
 
 export const PDFCanvas = (props: { pdf: File | string }) => {
 	const [pages, setPages] = useState(0)
-	const [width] = useState(Math.min(config.width, window.innerWidth))
+	const [width, setWidth] = useState(Math.min(config.width, window.innerWidth))
+	useEffect(() => {
+		const update = () => setWidth(Math.min(config.width, window.innerWidth))
+		update()
+		window.addEventListener("resize", update)
+		return () => window.removeEventListener("resize", update)
+	}, [])
 
 	const onLoadSuccess = (input: { numPages: number }) => {
 		setPages(input.numPages)
