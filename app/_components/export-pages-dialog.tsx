@@ -47,6 +47,34 @@ function ensurePdfSuffix(name: string): string {
 	return name.toLowerCase().endsWith(".pdf") ? name : `${name}.pdf`
 }
 
+function formatRangeSuffix(low: number, high: number): string {
+	return low === high ? `(${low})` : `(${low}-${high})`
+}
+
+function suggestedFileName(base: string, low: number, high: number): string {
+	return ensurePdfSuffix(`${base}-${formatRangeSuffix(low, high)}`)
+}
+
+function computeClampedRange(startStr: string, endStr: string, total: number): { low: number; high: number } | null {
+	const clampedPages = Math.max(total, 1)
+	const start = Number.parseInt(startStr || "", 10)
+	const end = Number.parseInt(endStr || "", 10)
+	if (Number.isNaN(start) || Number.isNaN(end)) {
+		return null
+	}
+	const s = Math.min(Math.max(start, 1), clampedPages)
+	const e = Math.min(Math.max(end, 1), clampedPages)
+	const low = Math.min(s, e)
+	const high = Math.max(s, e)
+	return { low, high }
+}
+
+function resolvedDownloadName(inputName: string | undefined, base: string, low: number, high: number): string {
+	const trimmed = inputName?.trim()
+	const baseName = trimmed?.length ? trimmed : `${base}-${formatRangeSuffix(low, high)}`
+	return ensurePdfSuffix(baseName)
+}
+
 async function sourceToArrayBuffer(src: File | string): Promise<ArrayBuffer> {
 	if (src instanceof File) {
 		return src.arrayBuffer()
@@ -100,7 +128,7 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 		const clampedPages = Math.max(totalPages, 1)
 		const start = Math.min(Math.max(currentPage ?? 1, 1), clampedPages)
 		const end = start
-		const suggested = ensurePdfSuffix(`${defaultBaseName}-p${start}-${end}`)
+		const suggested = suggestedFileName(defaultBaseName, start, end)
 		form.reset({
 			startPage: String(start),
 			endPage: String(end),
@@ -110,10 +138,8 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 		// Focus first field on open
 		setTimeout(() => {
 			const el = document.querySelector<HTMLInputElement>('input[name="startPage"]')
-			if (el) {
-				el.select()
-				el.focus()
-			}
+			el?.select()
+			el?.focus()
 		}, 0)
 	}, [open, currentPage, totalPages, defaultBaseName, form])
 
@@ -134,7 +160,7 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 		const e = Math.min(Math.max(end, 1), clampedPages)
 		const low = Math.min(s, e)
 		const high = Math.max(s, e)
-		const suggested = ensurePdfSuffix(`${defaultBaseName}-p${low}-${high}`)
+		const suggested = suggestedFileName(defaultBaseName, low, high)
 		form.setValue("fileName", suggested, { shouldDirty: false, shouldTouch: false })
 	}, [watchedStart, watchedEnd, defaultBaseName, totalPages, open, form.setValue])
 
@@ -164,18 +190,12 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 			return
 		}
 
-		const clampedPages = Math.max(totalPages, 1)
-		let start = Number.parseInt(values.startPage, 10)
-		let end = Number.parseInt(values.endPage, 10)
-		if (Number.isNaN(start) || Number.isNaN(end)) {
+		const range = computeClampedRange(values.startPage, values.endPage, totalPages)
+		if (!range) {
 			toast.error("Start and end pages must be numbers")
 			return
 		}
-
-		start = Math.min(Math.max(start, 1), clampedPages)
-		end = Math.min(Math.max(end, 1), clampedPages)
-		const low = Math.min(start, end)
-		const high = Math.max(start, end)
+		const { low, high } = range
 
 		try {
 			const { PDFDocument } = await import("pdf-lib")
@@ -189,7 +209,7 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 				outDoc.addPage(p)
 			}
 
-			const cleanBaseTitle = (values.fileName?.trim() || `${defaultBaseName}-p${low}-${high}`).replace(PDF_EXT_RE, "")
+			const cleanBaseTitle = (values.fileName?.trim() || `${defaultBaseName}-${formatRangeSuffix(low, high)}`).replace(PDF_EXT_RE, "")
 			outDoc.setTitle(cleanBaseTitle)
 
 			const outBytes = await outDoc.save()
@@ -197,7 +217,7 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 			const url = URL.createObjectURL(blob)
 			const a = document.createElement("a")
 			a.href = url
-			a.download = ensurePdfSuffix(values.fileName?.trim() || `${defaultBaseName}-p${low}-${high}`)
+			a.download = resolvedDownloadName(values.fileName, defaultBaseName, low, high)
 			document.body.appendChild(a)
 			a.click()
 			a.remove()
@@ -255,7 +275,7 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 							form.setValue("fileName", e.target.value)
 							hasManuallyEditedName.current = true
 						}}
-						placeholder={`${defaultBaseName}-p1-1.pdf`}
+						placeholder={`${defaultBaseName}-(1).pdf`}
 					/>
 
 					<DialogFooter>
