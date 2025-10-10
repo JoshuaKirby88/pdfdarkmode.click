@@ -2,10 +2,9 @@ import { createWithEqualityFn } from "zustand/traditional"
 
 type PDFState = {
 	pdf: string | File | null
-	currentPage: number | null
+	currentPage: number
 	showExportDialog: boolean
 
-	setCurrentPage: (page: number | null) => void
 	setShowExportDialog: (show: boolean) => void
 	openExportDialog: () => void
 	closeExportDialog: () => void
@@ -14,10 +13,9 @@ type PDFState = {
 
 export const usePDFZustand = createWithEqualityFn<PDFState>()((set, get) => ({
 	pdf: null as string | File | null,
-	currentPage: null as number | null,
+	currentPage: 0,
 	showExportDialog: false,
 
-	setCurrentPage: (page: number | null) => set({ currentPage: page }),
 	setShowExportDialog: (show: boolean) => set({ showExportDialog: show }),
 	openExportDialog: () => set({ showExportDialog: true }),
 	closeExportDialog: () => set({ showExportDialog: false }),
