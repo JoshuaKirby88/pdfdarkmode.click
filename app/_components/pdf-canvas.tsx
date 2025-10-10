@@ -72,8 +72,17 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	// Handle keyboard navigation
 	const handleKeyPress = useCallback(
 		(event: KeyboardEvent) => {
-			// Only handle number keys (0-9)
-			if (event.key >= "0" && event.key <= "9") {
+			// Check if user is focused on an input, textarea, or select element
+			const activeElement = document.activeElement
+			const isInputFocused = activeElement && (
+				activeElement.tagName === 'INPUT' ||
+				activeElement.tagName === 'TEXTAREA' ||
+				activeElement.tagName === 'SELECT' ||
+				activeElement.contentEditable === 'true'
+			)
+
+			// Only handle number keys (0-9) when not in an input field
+			if (event.key >= "0" && event.key <= "9" && !isInputFocused) {
 				event.preventDefault()
 
 				// Clear existing timeout
