@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import { usePDFZustand } from "@/zustand/pdf-zustand"
 import "react-pdf/dist/Page/TextLayer.css"
@@ -18,6 +18,7 @@ const config = {
 }
 
 const INTERSECTION_STEPS = 100
+const PAGE_INPUT_TIMEOUT_MS = 1000
 type PageViewport = { width: number; height: number }
 type PageLike = { getViewport: (opts: { scale: number }) => PageViewport }
 
@@ -49,6 +50,54 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	const [pageDims, setPageDims] = useState<Record<number, { width: number; height: number }>>({})
 
 	const rootRef = useRef<HTMLDivElement | null>(null)
+	const inputTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+	const currentInputRef = useRef<string>("")
+
+	// Function to scroll to a specific page
+	const scrollToPage = useCallback(
+		(pageNumber: number) => {
+			if (!rootRef.current || pageNumber < 1 || pageNumber > pages) {
+				return
+			}
+
+			const pageElement = rootRef.current.querySelector(`[data-page="${pageNumber}"]`) as HTMLElement
+			if (pageElement) {
+				pageElement.scrollIntoView({ behavior: "smooth", block: "start" })
+				usePDFZustand.setState({ currentPage: pageNumber })
+			}
+		},
+		[pages]
+	)
+
+	// Handle keyboard navigation
+	const handleKeyPress = useCallback(
+		(event: KeyboardEvent) => {
+			// Only handle number keys (0-9)
+			if (event.key >= "0" && event.key <= "9") {
+				event.preventDefault()
+
+				// Clear existing timeout
+				if (inputTimeoutRef.current) {
+					clearTimeout(inputTimeoutRef.current)
+				}
+
+				// Add the new digit to current input
+				currentInputRef.current += event.key
+
+				// Navigate immediately to the current input
+				const pageNumber = Number.parseInt(currentInputRef.current, 10)
+				if (pageNumber >= 1 && pageNumber <= pages) {
+					scrollToPage(pageNumber)
+				}
+
+				// Set timeout to reset input after 1 second of inactivity
+				inputTimeoutRef.current = setTimeout(() => {
+					currentInputRef.current = ""
+				}, PAGE_INPUT_TIMEOUT_MS)
+			}
+		},
+		[pages, scrollToPage]
+	)
 
 	useEffect(() => {
 		const update = () => setViewport({ width: window.innerWidth, height: window.innerHeight })
@@ -60,6 +109,18 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 			window.removeEventListener("orientationchange", update)
 		}
 	}, [])
+
+	// Add keyboard event listener for page navigation
+	useEffect(() => {
+		window.addEventListener("keydown", handleKeyPress)
+		return () => {
+			window.removeEventListener("keydown", handleKeyPress)
+			// Clean up any pending timeout
+			if (inputTimeoutRef.current) {
+				clearTimeout(inputTimeoutRef.current)
+			}
+		}
+	}, [handleKeyPress])
 
 	// Track visible/current page
 	useEffect(() => {
@@ -91,7 +152,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 		return () => {
 			observer.disconnect()
 		}
-	}, [usePDFZustand])
+	}, [pages])
 
 	const onLoadSuccess = (input: { numPages: number }) => {
 		setPages(input.numPages)
