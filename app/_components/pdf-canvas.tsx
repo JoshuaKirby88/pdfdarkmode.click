@@ -6,6 +6,7 @@ import { usePDFZustand } from "@/zustand/pdf-zustand"
 import "react-pdf/dist/Page/TextLayer.css"
 import "react-pdf/dist/esm/Page/AnnotationLayer.css"
 import { toast } from "sonner"
+import { Maximize2, Minimize2 } from "lucide-react"
 import ExportPagesDialog from "./export-pages-dialog"
 import { PageIndicator } from "./page-indicator"
 
@@ -48,6 +49,9 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	const [pages, setPages] = useState(0)
 	const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight })
 	const [pageDims, setPageDims] = useState<Record<number, { width: number; height: number }>>({})
+	const fitMode = usePDFZustand(state => state.fitMode)
+	const toggleFitMode = usePDFZustand(state => state.toggleFitMode)
+	
 
 	const rootRef = useRef<HTMLDivElement | null>(null)
 	const inputTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -76,6 +80,13 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 			const activeElement = document.activeElement
 			const isInputFocused = activeElement && (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.tagName === "SELECT")
 
+			// Handle fit mode toggle with 'f' key
+			if (event.key === 'f' || event.key === 'F') {
+				event.preventDefault()
+				toggleFitMode()
+				return
+			}
+
 			// Only handle number keys (0-9) when not in an input field
 			if (event.key >= "0" && event.key <= "9" && !isInputFocused) {
 				event.preventDefault()
@@ -100,7 +111,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 				}, PAGE_INPUT_TIMEOUT_MS)
 			}
 		},
-		[pages, scrollToPage]
+		[pages, scrollToPage, toggleFitMode]
 	)
 
 	useEffect(() => {
@@ -190,9 +201,31 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 				>
 					{Array.from({ length: pages }, (_, index) => index + 1).map(pageNumber => {
 						const dims = pageDims[pageNumber]
-						const fitWidth = dims ? Math.min(viewport.width, (viewport.height * dims.width) / dims.height) : Math.min(viewport.width, viewport.height)
+						let fitWidth: number
+						
+						if (dims) {
+							if (fitMode === 'height') {
+								// Height-fit: fit to height, calculate width proportionally
+								fitWidth = Math.min(viewport.width, (viewport.height * dims.width) / dims.height)
+							} else {
+								// Width-fit: prioritize width, use full screen width
+								fitWidth = viewport.width
+							}
+						} else {
+							fitWidth = Math.min(viewport.width, viewport.height)
+						}
+						
+						// Calculate the height needed for this page
+						const pageHeight = dims ? (fitWidth * dims.height) / dims.width : viewport.height
+						const containerHeight = fitMode === 'width' ? Math.max(viewport.height, pageHeight) : viewport.height
+						
 						return (
-							<div className="flex h-screen w-screen snap-start items-center justify-center overflow-hidden" data-page={pageNumber} key={`page-${pageNumber}`}>
+							<div 
+								className="flex w-screen snap-start items-center justify-center overflow-hidden" 
+								style={{ height: `${containerHeight}px` }}
+								data-page={pageNumber} 
+								key={`page-${pageNumber}`}
+							>
 								<Page
 									onLoadSuccess={(page: PageLike) => {
 										const vp = page.getViewport({ scale: 1 })
@@ -212,6 +245,21 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 
 			<ExportPagesDialog totalPages={pages} />
 			<PageIndicator totalPages={pages} />
+			
+			{/* Fit Mode Indicator */}
+			<div className="fixed bottom-4 left-4 z-50">
+				<button
+					onClick={toggleFitMode}
+					className="bg-black/60 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+					title={`Switch to ${fitMode === 'height' ? 'width' : 'height'}-fit mode (Press F)`}
+				>
+					{fitMode === 'height' ? (
+						<Maximize2 className="w-4 h-4" />
+					) : (
+						<Minimize2 className="w-4 h-4" />
+					)}
+				</button>
+			</div>
 		</div>
 	)
 }
