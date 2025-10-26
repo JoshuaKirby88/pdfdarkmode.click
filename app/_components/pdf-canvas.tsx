@@ -5,8 +5,8 @@ import { Document, Page, pdfjs } from "react-pdf"
 import { usePDFZustand } from "@/zustand/pdf-zustand"
 import "react-pdf/dist/Page/TextLayer.css"
 import "react-pdf/dist/esm/Page/AnnotationLayer.css"
-import { toast } from "sonner"
 import { Maximize2, Minimize2 } from "lucide-react"
+import { toast } from "sonner"
 import ExportPagesDialog from "./export-pages-dialog"
 import { PageIndicator } from "./page-indicator"
 
@@ -19,7 +19,7 @@ const config = {
 }
 
 const INTERSECTION_STEPS = 100
-const PAGE_INPUT_TIMEOUT_MS = 1000
+const PAGE_INPUT_TIMEOUT_MS = 500
 type PageViewport = { width: number; height: number }
 type PageLike = { getViewport: (opts: { scale: number }) => PageViewport }
 
@@ -51,7 +51,6 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	const [pageDims, setPageDims] = useState<Record<number, { width: number; height: number }>>({})
 	const fitMode = usePDFZustand(state => state.fitMode)
 	const toggleFitMode = usePDFZustand(state => state.toggleFitMode)
-	
 
 	const rootRef = useRef<HTMLDivElement | null>(null)
 	const inputTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -81,7 +80,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 			const isInputFocused = activeElement && (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.tagName === "SELECT")
 
 			// Handle fit mode toggle with 'f' key
-			if (event.key === 'f' || event.key === 'F') {
+			if (event.key === "f" || event.key === "F") {
 				event.preventDefault()
 				toggleFitMode()
 				return
@@ -202,9 +201,9 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 					{Array.from({ length: pages }, (_, index) => index + 1).map(pageNumber => {
 						const dims = pageDims[pageNumber]
 						let fitWidth: number
-						
+
 						if (dims) {
-							if (fitMode === 'height') {
+							if (fitMode === "height") {
 								// Height-fit: fit to height, calculate width proportionally
 								fitWidth = Math.min(viewport.width, (viewport.height * dims.width) / dims.height)
 							} else {
@@ -214,17 +213,17 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 						} else {
 							fitWidth = Math.min(viewport.width, viewport.height)
 						}
-						
+
 						// Calculate the height needed for this page
 						const pageHeight = dims ? (fitWidth * dims.height) / dims.width : viewport.height
-						const containerHeight = fitMode === 'width' ? Math.max(viewport.height, pageHeight) : viewport.height
-						
+						const containerHeight = fitMode === "width" ? Math.max(viewport.height, pageHeight) : viewport.height
+
 						return (
-							<div 
-								className="flex w-screen snap-start items-center justify-center overflow-hidden" 
-								style={{ height: `${containerHeight}px` }}
-								data-page={pageNumber} 
+							<div
+								className="flex w-screen snap-start items-center justify-center overflow-hidden"
+								data-page={pageNumber}
 								key={`page-${pageNumber}`}
+								style={{ height: `${containerHeight}px` }}
 							>
 								<Page
 									onLoadSuccess={(page: PageLike) => {
@@ -245,19 +244,15 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 
 			<ExportPagesDialog totalPages={pages} />
 			<PageIndicator totalPages={pages} />
-			
+
 			{/* Fit Mode Indicator */}
 			<div className="fixed bottom-4 left-4 z-50">
 				<button
+					className="group rounded-full bg-black/60 p-2 text-white backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-black/80"
 					onClick={toggleFitMode}
-					className="bg-black/60 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
-					title={`Switch to ${fitMode === 'height' ? 'width' : 'height'}-fit mode (Press F)`}
+					title={`Switch to ${fitMode === "height" ? "width" : "height"}-fit mode (Press F)`}
 				>
-					{fitMode === 'height' ? (
-						<Maximize2 className="w-4 h-4" />
-					) : (
-						<Minimize2 className="w-4 h-4" />
-					)}
+					{fitMode === "height" ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
 				</button>
 			</div>
 		</div>
