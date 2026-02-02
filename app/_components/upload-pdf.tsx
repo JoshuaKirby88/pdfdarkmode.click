@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Form } from "@/components/form/form"
@@ -8,48 +7,53 @@ import { FormInput } from "@/components/form/form-input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useFileUpload } from "@/hooks/use-file-upload"
-import { useIsMac } from "@/hooks/use-is-mac"
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { usePDFZustand } from "@/zustand/pdf-zustand"
 
 export const UploadPDF = () => {
 	const schema = z.object({ link: z.string().optional() })
 	const form = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) })
-	const [_, { openFileDialog, getInputProps }] = useFileUpload({ accept: ".pdf", onFilesAdded: addedFiles => usePDFZustand.setState({ pdf: addedFiles[0].file as File }) })
-	const isMac = useIsMac()
+	const [_, { openFileDialog, getInputProps }] = useFileUpload({
+		accept: ".pdf",
+		onFilesAdded: addedFiles => usePDFZustand.setState({ pdf: addedFiles[0].file as File, markdownContent: null, markdownCost: null }),
+	})
 
 	const onSubmit = (input: z.infer<typeof schema>) => {
 		if (input.link && input.link.trim().length > 0) {
-			usePDFZustand.setState({ pdf: input.link })
+			usePDFZustand.setState({ pdf: input.link, markdownContent: null, markdownCost: null })
 		}
 	}
 
-	useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			const isLetterU = event.key.toLowerCase() === "u"
-			const hasPrimaryModifier = event.metaKey || event.ctrlKey
-			const hasDisallowedModifiers = event.altKey || event.shiftKey
-			if (isLetterU && hasPrimaryModifier && !hasDisallowedModifiers) {
-				event.preventDefault()
-				openFileDialog()
-			}
-		}
-
-		window.addEventListener("keydown", handleKeyDown)
-		return () => window.removeEventListener("keydown", handleKeyDown)
-	}, [openFileDialog])
+	useKeyboardShortcuts(
+		[
+			{
+				key: "ctrl+x+u",
+				handler: e => {
+					e.preventDefault()
+					e.stopPropagation()
+					openFileDialog()
+				},
+				priority: 10,
+			},
+		],
+		[openFileDialog]
+	)
 
 	return (
-		<Form {...form} className="w-full max-w-lg flex-row items-end gap-2" onSubmit={onSubmit}>
-			<FormInput autoFocus name="link" placeholder="URL to a public PDF" />
-			<FormButton className="w-fit">Open ↵</FormButton>
+		<>
+			<Form {...form} className="w-full max-w-lg flex-row items-end gap-2" onSubmit={onSubmit}>
+				<FormInput autoFocus name="link" placeholder="URL to a public PDF" />
+				<FormButton className="w-fit">Open ↵</FormButton>
 
-			<Separator className="mx-2" orientation="vertical" />
+				<Separator className="mx-2" orientation="vertical" />
 
-			<Button onClick={openFileDialog}>
-				Upload
-				{isMac ? " ⌘U" : " Ctrl U"}
-			</Button>
-			<input {...getInputProps()} className="sr-only" tabIndex={-1} />
-		</Form>
+				<Button onClick={openFileDialog}>
+					Upload <span className="ml-1 text-muted-foreground text-xs">(U)</span>
+				</Button>
+				<input {...getInputProps()} className="sr-only" tabIndex={-1} />
+			</Form>
+
+			<p className="fixed bottom-4 text-muted-foreground text-xs">All shortcuts use Ctrl+X followed by a key</p>
+		</>
 	)
 }

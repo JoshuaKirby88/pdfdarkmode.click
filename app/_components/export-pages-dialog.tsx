@@ -7,6 +7,7 @@ import { Form } from "@/components/form/form"
 import { FormButton } from "@/components/form/form-button"
 import { FormInput } from "@/components/form/form-input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { usePDFZustand } from "@/zustand/pdf-zustand"
 
 type Props = {
@@ -120,7 +121,6 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 		return base || fallback
 	}, [pdf])
 
-	// Prefill when dialog opens
 	useEffect(() => {
 		if (!open) {
 			return
@@ -135,7 +135,7 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 			fileName: suggested,
 		})
 		hasManuallyEditedName.current = false
-		// Focus first field on open
+
 		setTimeout(() => {
 			const el = document.querySelector<HTMLInputElement>('input[name="startPage"]')
 			el?.select()
@@ -143,7 +143,6 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 		}, 0)
 	}, [open, currentPage, totalPages, defaultBaseName, form])
 
-	// Auto-update filename based on page range unless manually edited
 	const watchedStart = form.watch("startPage")
 	const watchedEnd = form.watch("endPage")
 	useEffect(() => {
@@ -164,25 +163,35 @@ export const ExportPagesDialog = ({ totalPages }: Props) => {
 		form.setValue("fileName", suggested, { shouldDirty: false, shouldTouch: false })
 	}, [watchedStart, watchedEnd, defaultBaseName, totalPages, open, form.setValue])
 
-	// Global shortcut: Cmd/Ctrl+E to open, Esc to close
-	useEffect(() => {
-		const onKey = (e: KeyboardEvent) => {
-			const meta = e.metaKey || e.ctrlKey
-			if (meta && (e.key === "e" || e.key === "E")) {
-				if (!pdf) {
-					return
-				}
-				e.preventDefault()
-				setOpen(true)
-			} else if (e.key === "Escape" && open) {
-				setOpen(false)
-			}
-		}
-		window.addEventListener("keydown", onKey)
-		return () => {
-			window.removeEventListener("keydown", onKey)
-		}
-	}, [pdf, open, setOpen])
+	useKeyboardShortcuts(
+		[
+			{
+				key: "ctrl+x+e",
+				handler: e => {
+					e.preventDefault()
+					e.stopPropagation()
+					if (pdf) {
+						setOpen(true)
+					}
+				},
+				condition: () => !!pdf,
+				priority: 10,
+			},
+
+			{
+				key: "escape",
+				handler: e => {
+					if (open) {
+						e.preventDefault()
+						setOpen(false)
+					}
+				},
+				condition: () => open,
+				priority: 20,
+			},
+		],
+		[pdf, open, setOpen]
+	)
 
 	const onSubmit = async (values: FormValues) => {
 		if (!pdf) {

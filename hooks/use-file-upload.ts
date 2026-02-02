@@ -17,13 +17,13 @@ export type FileWithPreview = {
 }
 
 export type FileUploadOptions = {
-	maxFiles?: number // Only used when multiple is true, defaults to Infinity
-	maxSize?: number // in bytes
+	maxFiles?: number
+	maxSize?: number
 	accept?: string
-	multiple?: boolean // Defaults to false
+	multiple?: boolean
 	initialFiles?: FileMetadata[]
-	onFilesChange?: (files: FileWithPreview[]) => void // Callback when files change
-	onFilesAdded?: (addedFiles: FileWithPreview[]) => void // Callback when new files are added
+	onFilesChange?: (files: FileWithPreview[]) => void
+	onFilesAdded?: (addedFiles: FileWithPreview[]) => void
 }
 
 export type FileUploadState = {
@@ -32,7 +32,6 @@ export type FileUploadState = {
 	errors: string[]
 }
 
-// Internal helpers to keep hook functions simple and readable
 const isFileOverMaxSize = (file: File | FileMetadata, maxSize: number): boolean => file.size > maxSize
 
 const getFileName = (file: File | FileMetadata): string => (file instanceof File ? file.name : file.name)
@@ -168,7 +167,6 @@ export const useFileUpload = (options: FileUploadOptions = {}) => {
 
 	const clearFiles = useCallback(() => {
 		setState(prev => {
-			// Clean up object URLs
 			for (const file of prev.files) {
 				if (file.preview && file.file instanceof File && file.file.type.startsWith("image/")) {
 					URL.revokeObjectURL(file.preview)
@@ -292,13 +290,11 @@ export const useFileUpload = (options: FileUploadOptions = {}) => {
 			e.stopPropagation()
 			setState(prev => ({ ...prev, isDragging: false }))
 
-			// Don't process files if the input is disabled
 			if (inputRef.current?.disabled) {
 				return
 			}
 
 			if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-				// In single file mode, only use the first file
 				if (multiple) {
 					addFiles(e.dataTransfer.files)
 				} else {
@@ -357,7 +353,6 @@ export const useFileUpload = (options: FileUploadOptions = {}) => {
 	] as const
 }
 
-// Helper function to format bytes to human-readable format
 export const formatBytes = (bytes: number, decimals = 2): string => {
 	if (bytes === 0) {
 		return "0 Bytes"

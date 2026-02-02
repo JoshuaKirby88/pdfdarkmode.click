@@ -5,9 +5,11 @@ import { Document, Page, pdfjs } from "react-pdf"
 import { usePDFZustand } from "@/zustand/pdf-zustand"
 import "react-pdf/dist/Page/TextLayer.css"
 import "react-pdf/dist/esm/Page/AnnotationLayer.css"
-import { Maximize2, Minimize2 } from "lucide-react"
+import { FileText, Maximize2, Minimize2 } from "lucide-react"
 import { toast } from "sonner"
+import { isInputFocused, useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import ExportPagesDialog from "./export-pages-dialog"
+import MarkdownDialog from "./markdown-dialog"
 import { PageIndicator } from "./page-indicator"
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString()
@@ -51,12 +53,12 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	const [pageDims, setPageDims] = useState<Record<number, { width: number; height: number }>>({})
 	const fitMode = usePDFZustand(state => state.fitMode)
 	const toggleFitMode = usePDFZustand(state => state.toggleFitMode)
+	const openMarkdownDialog = usePDFZustand(state => state.openMarkdownDialog)
 
 	const rootRef = useRef<HTMLDivElement | null>(null)
 	const inputTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const currentInputRef = useRef<string>("")
 
-	// Function to scroll to a specific page
 	const scrollToPage = useCallback(
 		(pageNumber: number) => {
 			if (!rootRef.current || pageNumber < 1 || pageNumber > pages) {
@@ -72,45 +74,56 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 		[pages]
 	)
 
-	// Handle keyboard navigation
-	const handleKeyPress = useCallback(
-		(event: KeyboardEvent) => {
-			// Check if user is focused on an input, textarea, or select element
-			const activeElement = document.activeElement
-			const isInputFocused = activeElement && (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.tagName === "SELECT")
+	useKeyboardShortcuts(
+		[
+			{
+				key: "ctrl+x+m",
+				handler: e => {
+					e.preventDefault()
+					e.stopPropagation()
+					openMarkdownDialog()
+				},
+				priority: 10,
+			},
 
-			// Handle fit mode toggle with 'f' key
-			if (event.key === "f" || event.key === "F") {
-				event.preventDefault()
-				toggleFitMode()
-				return
-			}
+			{
+				key: "ctrl+x+f",
+				handler: e => {
+					e.preventDefault()
+					e.stopPropagation()
+					toggleFitMode()
+				},
+				priority: 10,
+			},
 
-			// Only handle number keys (0-9) when not in an input field
-			if (event.key >= "0" && event.key <= "9" && !isInputFocused) {
-				event.preventDefault()
+			...Array.from({ length: 10 }, (_, i) => ({
+				key: String(i),
+				handler: (e: KeyboardEvent) => {
+					if (isInputFocused()) {
+						return
+					}
 
-				// Clear existing timeout
-				if (inputTimeoutRef.current) {
-					clearTimeout(inputTimeoutRef.current)
-				}
+					e.preventDefault()
 
-				// Add the new digit to current input
-				currentInputRef.current += event.key
+					if (inputTimeoutRef.current) {
+						clearTimeout(inputTimeoutRef.current)
+					}
 
-				// Navigate immediately to the current input
-				const pageNumber = Number.parseInt(currentInputRef.current, 10)
-				if (pageNumber >= 1 && pageNumber <= pages) {
-					scrollToPage(pageNumber)
-				}
+					currentInputRef.current += e.key
 
-				// Set timeout to reset input after 1 second of inactivity
-				inputTimeoutRef.current = setTimeout(() => {
-					currentInputRef.current = ""
-				}, PAGE_INPUT_TIMEOUT_MS)
-			}
-		},
-		[pages, scrollToPage, toggleFitMode]
+					const pageNumber = Number.parseInt(currentInputRef.current, 10)
+					if (pageNumber >= 1 && pageNumber <= pages) {
+						scrollToPage(pageNumber)
+					}
+
+					inputTimeoutRef.current = setTimeout(() => {
+						currentInputRef.current = ""
+					}, PAGE_INPUT_TIMEOUT_MS)
+				},
+				priority: 5,
+			})),
+		],
+		[pages, scrollToPage, toggleFitMode, openMarkdownDialog]
 	)
 
 	useEffect(() => {
@@ -124,19 +137,14 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 		}
 	}, [])
 
-	// Add keyboard event listener for page navigation
 	useEffect(() => {
-		window.addEventListener("keydown", handleKeyPress)
 		return () => {
-			window.removeEventListener("keydown", handleKeyPress)
-			// Clean up any pending timeout
 			if (inputTimeoutRef.current) {
 				clearTimeout(inputTimeoutRef.current)
 			}
 		}
-	}, [handleKeyPress])
+	}, [])
 
-	// Track visible/current page
 	useEffect(() => {
 		if (!rootRef.current) {
 			return
@@ -166,7 +174,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 		return () => {
 			observer.disconnect()
 		}
-	}, [pages])
+	}, [])
 
 	const onLoadSuccess = (input: { numPages: number }) => {
 		setPages(input.numPages)
@@ -204,17 +212,14 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 
 						if (dims) {
 							if (fitMode === "height") {
-								// Height-fit: fit to height, calculate width proportionally
 								fitWidth = Math.min(viewport.width, (viewport.height * dims.width) / dims.height)
 							} else {
-								// Width-fit: prioritize width, use full screen width
 								fitWidth = viewport.width
 							}
 						} else {
 							fitWidth = Math.min(viewport.width, viewport.height)
 						}
 
-						// Calculate the height needed for this page
 						const pageHeight = dims ? (fitWidth * dims.height) / dims.width : viewport.height
 						const containerHeight = fitMode === "width" ? Math.max(viewport.height, pageHeight) : viewport.height
 
@@ -243,6 +248,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 			</div>
 
 			<ExportPagesDialog totalPages={pages} />
+			<MarkdownDialog totalPages={pages} />
 			<PageIndicator totalPages={pages} />
 
 			{/* Fit Mode Indicator */}
@@ -250,9 +256,22 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 				<button
 					className="group rounded-full bg-black/60 p-2 text-white backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-black/80"
 					onClick={toggleFitMode}
-					title={`Switch to ${fitMode === "height" ? "width" : "height"}-fit mode (Press F)`}
+					title={`Switch to ${fitMode === "height" ? "width" : "height"}-fit mode (F)`}
+					type="button"
 				>
 					{fitMode === "height" ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+				</button>
+			</div>
+
+			{/* Markdown Conversion Button */}
+			<div className="fixed right-4 bottom-4 z-50">
+				<button
+					className="group rounded-full bg-black/60 p-2 text-white backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-black/80"
+					onClick={openMarkdownDialog}
+					title="Convert to Markdown (M)"
+					type="button"
+				>
+					<FileText className="h-4 w-4" />
 				</button>
 			</div>
 		</div>
