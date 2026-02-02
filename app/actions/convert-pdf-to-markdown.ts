@@ -2,71 +2,76 @@
 
 import { generateText } from "ai"
 
-async function pdfSourceToBase64(src: File | string): Promise<string> {
-	let arrayBuffer: ArrayBuffer
+const systemPrompt = `Convert this PDF page to markdown. Extract all text accurately, preserve formatting, structure, headings, lists, and tables.
+Heading: Judge heading based on text size. You're given a cut-out of a larger PDF, so first sentence might not be the title.
+Sentences: When a single sentence spans multiple lines due to PDF formatting or width constraints, merge them into a single line.
+Images: Convert any images to descriptive text.
+Code: Wrap ALL code within the PDF using tripple backticks (\`\`\`) or single backticks (\`).
+Page Numbers: Don't add page numbers. If already present (a single number floating at the bottom), strip it.
 
-	if (src instanceof File) {
-		arrayBuffer = await src.arrayBuffer()
-	} else if (src.startsWith("data:")) {
-		return src.split(",")[1] ?? ""
-	} else {
-		const res = await fetch(src)
-		if (!res.ok) {
-			throw new Error(`Failed to fetch PDF (${res.status})`)
-		}
-		arrayBuffer = await res.arrayBuffer()
-	}
+Final Output: Only return the actual content from the PDF.`
 
-	const bytes = new Uint8Array(arrayBuffer)
-	let binary = ""
-	for (let i = 0; i < bytes.byteLength; i++) {
-		binary += String.fromCharCode(bytes[i])
-	}
-	return btoa(binary)
-}
+async function convertSinglePageToMarkdown(base64PagePdf: string): Promise<{ markdown: string; cost?: number }> {
+	const result = await generateText({
+		model: "gemini-2.5-flash-lite",
+		messages: [
+			{ role: "system", content: systemPrompt },
+			{
+				role: "user",
+				content: [
+					{
+						type: "file",
+						data: Buffer.from(base64PagePdf, "base64"),
+						mediaType: "application/pdf",
+					},
+				],
+			},
+		],
+	})
 
-export async function convertPdfToMarkdown(pdfSource: File | string, _totalPages: number): Promise<{ success: boolean; markdown?: string; error?: string; cost?: number }> {
+	let cost: number | undefined
 	try {
-		const base64Pdf = await pdfSourceToBase64(pdfSource)
-
-		const result = await generateText({
-			model: "gemini-2.5-flash-lite",
-			messages: [
-				{
-					role: "user",
-					content: [
-						{
-							type: "text",
-							text: "Convert this entire PDF document to markdown. Extract all text accurately, preserve formatting, structure, headings, lists, and tables. Convert any images to descriptive text. Output only the markdown content.",
-						},
-						{
-							type: "file",
-							data: Buffer.from(base64Pdf, "base64"),
-							mediaType: "application/pdf",
-						},
-					],
-				},
-			],
-		})
-
-		let cost: number | undefined
-		try {
-			const steps = (result as any).steps
-			if (Array.isArray(steps) && steps.length > 0) {
-				const costString = steps[0]?.providerMetadata?.gateway?.cost
-				if (typeof costString === "string") {
-					const parsedCost = Number.parseFloat(costString)
-					if (!Number.isNaN(parsedCost)) {
-						cost = parsedCost
-					}
+		const steps = (result as any).steps
+		if (Array.isArray(steps) && steps.length > 0) {
+			const costString = steps[0]?.providerMetadata?.gateway?.cost
+			if (typeof costString === "string") {
+				const parsedCost = Number.parseFloat(costString)
+				if (!Number.isNaN(parsedCost)) {
+					cost = parsedCost
 				}
 			}
-		} catch {}
+		}
+	} catch { }
+
+	// Strip markdown code block wrapper if present (only ```markdown, not generic ```)
+	let markdown = result.text.trim()
+	if (markdown.startsWith("```markdown\n") && markdown.endsWith("\n```")) {
+		markdown = markdown.slice("```markdown\n".length, -"\n```".length)
+	} else if (markdown.startsWith("```markdown") && markdown.endsWith("```")) {
+		markdown = markdown.slice("```markdown".length, -"```".length).trim()
+	}
+
+	return {
+		markdown: markdown.trim(),
+		cost,
+	}
+}
+
+export async function convertPdfToMarkdown(pageBuffers: string[], totalPages: number): Promise<{ success: boolean; markdown?: string; error?: string; cost?: number }> {
+	try {
+		// Process all pages in parallel
+		const results = await Promise.all(pageBuffers.map(base64Page => convertSinglePageToMarkdown(base64Page)))
+
+		// Concatenate markdown
+		const markdown = results.map(r => r.markdown).join("\n\n")
+
+		// Sum all page costs
+		const totalCost = results.reduce((sum, r) => sum + (r.cost || 0), 0)
 
 		return {
 			success: true,
-			markdown: result.text,
-			cost,
+			markdown,
+			cost: totalCost,
 		}
 	} catch (error) {
 		return {

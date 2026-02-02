@@ -96,7 +96,23 @@ export const MarkdownDialog = ({ totalPages }: Props) => {
 		const convert = async () => {
 			setIsConverting(true)
 			try {
-				const result = await convertPdfToMarkdown(pdf, totalPages)
+				// Import splitting utility
+				const { splitPdfIntoPageBuffers } = await import("@/utils/split-pdf")
+
+				// Split PDF into pages
+				const pageBuffers = await splitPdfIntoPageBuffers(pdf)
+
+				// Convert to base64 strings
+				const base64Pages = pageBuffers.map(buffer => {
+					let binary = ""
+					for (let i = 0; i < buffer.byteLength; i++) {
+						binary += String.fromCharCode(buffer[i])
+					}
+					return btoa(binary)
+				})
+
+				// Call server action with split pages
+				const result = await convertPdfToMarkdown(base64Pages, totalPages)
 				if (result.success && result.markdown) {
 					setMarkdownContent(result.markdown)
 					if (result.cost !== undefined) {
