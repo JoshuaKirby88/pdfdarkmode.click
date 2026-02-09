@@ -8,6 +8,7 @@ Sentences: When a single sentence spans multiple lines due to PDF formatting or 
 Images: Convert any images to descriptive text.
 Code: Wrap ALL code within the PDF using tripple backticks (\`\`\`) or single backticks (\`).
 Page Numbers: Don't add page numbers. If already present (a single number floating at the bottom), strip it.
+Empty Pages: If a page has no visible content (blank or whitespace only), return empty text for that page.
 
 Final Output: Only return the actual content from the PDF.`
 
