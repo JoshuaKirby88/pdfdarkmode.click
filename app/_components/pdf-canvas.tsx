@@ -74,10 +74,10 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 				if (scrollTimeoutRef.current) {
 					clearTimeout(scrollTimeoutRef.current)
 				}
-				
+
 				usePDFZustand.setState({ currentPage: pageNumber })
 				pageElement.scrollIntoView({ behavior: "smooth", block: "start" })
-				
+
 				scrollTimeoutRef.current = setTimeout(() => {
 					isScrollingRef.current = false
 				}, 1000)
@@ -117,7 +117,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 					}
 
 					e.preventDefault()
-					
+
 					if (current < 1 || current > pages) {
 						return
 					}
@@ -141,7 +141,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 					}
 
 					e.preventDefault()
-					
+
 					if (current < 1 || current > pages) {
 						return
 					}
@@ -214,17 +214,17 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 		}
 		const container = rootRef.current
 		const elems = Array.from(container.querySelectorAll<HTMLElement>("[data-page]"))
-		
+
 		if (elems.length === 0) {
 			return
 		}
-		
+
 		const observer = new IntersectionObserver(
 			entries => {
 				if (isScrollingRef.current) {
 					return
 				}
-				
+
 				let maxRatio = 0
 				let page: number | null = null
 				for (const entry of entries) {
@@ -320,7 +320,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 			</div>
 
 			<ExportPagesDialog totalPages={pages} />
-			<MarkdownDialog totalPages={pages} />
+			<MarkdownDialog />
 			<PageIndicator totalPages={pages} />
 
 			{/* Fit Mode Indicator */}

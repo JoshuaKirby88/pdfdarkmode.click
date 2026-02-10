@@ -7,13 +7,43 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { usePDFZustand } from "@/zustand/pdf-zustand"
-import { convertPdfToMarkdown } from "../actions/convert-pdf-to-markdown"
+import { convertPdfPageToMarkdown } from "../actions/convert-pdf-to-markdown"
 
-type Props = {
-	totalPages: number
+async function processPagesParallel(base64Pages: string[], onUpdate: (results: ({ markdown: string; cost: number } | null)[]) => void) {
+	const results: ({ markdown: string; cost: number } | null)[] = new Array(base64Pages.length).fill(null)
+
+	await Promise.all(
+		base64Pages.map(async (page, index) => {
+			try {
+				const result = await convertPdfPageToMarkdown(page)
+				if (result.success && result.markdown) {
+					results[index] = { markdown: result.markdown, cost: result.cost || 0 }
+				} else {
+					results[index] = { markdown: `[Error converting page ${index + 1}: ${result.error || "Unknown error"}]`, cost: 0 }
+				}
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "Unknown error"
+				results[index] = { markdown: `[Error converting page ${index + 1}: ${message}]`, cost: 0 }
+			} finally {
+				onUpdate([...results])
+			}
+		})
+	)
 }
 
-export const MarkdownDialog = ({ totalPages }: Props) => {
+async function preparePdfForConversion(pdf: string | File) {
+	const { splitPdfIntoPageBuffers } = await import("@/utils/split-pdf")
+	const pageBuffers = await splitPdfIntoPageBuffers(pdf)
+	return pageBuffers.map(buffer => {
+		let binary = ""
+		for (let i = 0; i < buffer.byteLength; i++) {
+			binary += String.fromCharCode(buffer[i])
+		}
+		return btoa(binary)
+	})
+}
+
+export const MarkdownDialog = () => {
 	const { pdf, open, setOpen, markdownContent, setMarkdownContent, markdownCost, setMarkdownCost, isConverting, setIsConverting } = usePDFZustand(state => ({
 		pdf: state.pdf,
 		open: state.showMarkdownDialog,
@@ -28,6 +58,7 @@ export const MarkdownDialog = ({ totalPages }: Props) => {
 
 	const [isCopying, setIsCopying] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
+	const [conversionProgress, setConversionProgress] = useState<{ current: number; total: number } | null>(null)
 
 	const handleSave = useCallback(() => {
 		if (!markdownContent) {
@@ -84,6 +115,42 @@ export const MarkdownDialog = ({ totalPages }: Props) => {
 		}
 	}, [markdownContent])
 
+	const convertPDF = useCallback(async () => {
+		if (!pdf) {
+			return
+		}
+
+		setIsConverting(true)
+		try {
+			// Prepare PDF
+			const base64Pages = await preparePdfForConversion(pdf)
+
+			// Initialize progress
+			setConversionProgress({ current: 0, total: base64Pages.length })
+
+			await processPagesParallel(base64Pages, results => {
+				const completedCount = results.filter(r => r !== null).length
+				setConversionProgress({ current: completedCount, total: base64Pages.length })
+
+				const validResults = results.filter((r): r is { markdown: string; cost: number } => r !== null)
+				const text = validResults.map(r => r.markdown).join("\n\n")
+				const cost = validResults.reduce((acc, r) => acc + r.cost, 0)
+
+				setMarkdownContent(text)
+				setMarkdownCost(cost)
+			})
+
+			toast.success("PDF converted to markdown successfully")
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Failed to convert PDF"
+			toast.error(message)
+			setOpen(false)
+		} finally {
+			setIsConverting(false)
+			setConversionProgress(null)
+		}
+	}, [pdf, setIsConverting, setMarkdownContent, setMarkdownCost, setOpen])
+
 	useEffect(() => {
 		if (!(open && pdf)) {
 			return
@@ -97,47 +164,8 @@ export const MarkdownDialog = ({ totalPages }: Props) => {
 			return
 		}
 
-		const convert = async () => {
-			setIsConverting(true)
-			try {
-				// Import splitting utility
-				const { splitPdfIntoPageBuffers } = await import("@/utils/split-pdf")
-
-				// Split PDF into pages
-				const pageBuffers = await splitPdfIntoPageBuffers(pdf)
-
-				// Convert to base64 strings
-				const base64Pages = pageBuffers.map(buffer => {
-					let binary = ""
-					for (let i = 0; i < buffer.byteLength; i++) {
-						binary += String.fromCharCode(buffer[i])
-					}
-					return btoa(binary)
-				})
-
-				// Call server action with split pages
-				const result = await convertPdfToMarkdown(base64Pages, totalPages)
-				if (result.success && result.markdown) {
-					setMarkdownContent(result.markdown)
-					if (result.cost !== undefined) {
-						setMarkdownCost(result.cost)
-					}
-					toast.success("PDF converted to markdown successfully")
-				} else {
-					toast.error(result.error || "Failed to convert PDF to markdown")
-					setOpen(false)
-				}
-			} catch (error) {
-				const message = error instanceof Error ? error.message : "Failed to convert PDF"
-				toast.error(message)
-				setOpen(false)
-			} finally {
-				setIsConverting(false)
-			}
-		}
-
-		convert()
-	}, [open, pdf, markdownContent, totalPages, setIsConverting, setMarkdownContent, setMarkdownCost, setOpen, isConverting])
+		convertPDF()
+	}, [open, pdf, markdownContent, isConverting, convertPDF])
 
 	useKeyboardShortcuts(
 		[
@@ -188,7 +216,7 @@ export const MarkdownDialog = ({ totalPages }: Props) => {
 				<DialogHeader>
 					<DialogTitle className="pr-8">PDF to Markdown</DialogTitle>
 					{isConverting ? (
-						<DialogDescription>Converting your PDF to markdown... This may take a moment.</DialogDescription>
+						<DialogDescription>{conversionProgress ? `Converted ${conversionProgress.current} of ${conversionProgress.total} pages...` : "Preparing conversion..."}</DialogDescription>
 					) : (
 						markdownCost !== null && markdownCost > 0 && <DialogDescription className="text-xs">Cost: ~${markdownCost.toFixed(4)}</DialogDescription>
 					)}
@@ -199,7 +227,9 @@ export const MarkdownDialog = ({ totalPages }: Props) => {
 						<div className="flex h-full items-center justify-center">
 							<div className="flex flex-col items-center gap-4">
 								<Loader2 className="h-8 w-8 animate-spin text-primary" />
-								<p className="text-muted-foreground text-sm">Converting PDF to markdown...</p>
+								<p className="text-muted-foreground text-sm">
+									{conversionProgress ? `Converted ${conversionProgress.current} of ${conversionProgress.total} pages...` : "Preparing PDF..."}
+								</p>
 							</div>
 						</div>
 					) : (

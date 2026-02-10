@@ -32,7 +32,7 @@ async function convertSinglePageToMarkdown(base64PagePdf: string): Promise<{ mar
 
 	let cost: number | undefined
 	try {
-		const steps = (result as any).steps
+		const steps = (result as unknown as { steps?: { providerMetadata?: { gateway?: { cost?: string } } }[] }).steps
 		if (Array.isArray(steps) && steps.length > 0) {
 			const costString = steps[0]?.providerMetadata?.gateway?.cost
 			if (typeof costString === "string") {
@@ -42,7 +42,9 @@ async function convertSinglePageToMarkdown(base64PagePdf: string): Promise<{ mar
 				}
 			}
 		}
-	} catch { }
+	} catch {
+		// Ignore cost extraction errors
+	}
 
 	// Strip markdown code block wrapper if present (only ```markdown, not generic ```)
 	let markdown = result.text.trim()
@@ -58,26 +60,18 @@ async function convertSinglePageToMarkdown(base64PagePdf: string): Promise<{ mar
 	}
 }
 
-export async function convertPdfToMarkdown(pageBuffers: string[], totalPages: number): Promise<{ success: boolean; markdown?: string; error?: string; cost?: number }> {
+export async function convertPdfPageToMarkdown(base64Page: string): Promise<{ success: boolean; markdown?: string; error?: string; cost?: number }> {
 	try {
-		// Process all pages in parallel
-		const results = await Promise.all(pageBuffers.map(base64Page => convertSinglePageToMarkdown(base64Page)))
-
-		// Concatenate markdown
-		const markdown = results.map(r => r.markdown).join("\n\n")
-
-		// Sum all page costs
-		const totalCost = results.reduce((sum, r) => sum + (r.cost || 0), 0)
-
+		const result = await convertSinglePageToMarkdown(base64Page)
 		return {
 			success: true,
-			markdown,
-			cost: totalCost,
+			markdown: result.markdown,
+			cost: result.cost,
 		}
 	} catch (error) {
 		return {
 			success: false,
-			error: error instanceof Error ? error.message : "Failed to convert PDF to markdown",
+			error: error instanceof Error ? error.message : "Failed to convert page",
 		}
 	}
 }
