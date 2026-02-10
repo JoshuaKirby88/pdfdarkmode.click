@@ -54,10 +54,13 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 	const fitMode = usePDFZustand(state => state.fitMode)
 	const toggleFitMode = usePDFZustand(state => state.toggleFitMode)
 	const openMarkdownDialog = usePDFZustand(state => state.openMarkdownDialog)
+	const currentPage = usePDFZustand(state => state.currentPage)
 
 	const rootRef = useRef<HTMLDivElement | null>(null)
 	const inputTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const currentInputRef = useRef<string>("")
+	const isScrollingRef = useRef(false)
+	const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
 	const scrollToPage = useCallback(
 		(pageNumber: number) => {
@@ -67,8 +70,17 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 
 			const pageElement = rootRef.current.querySelector(`[data-page="${pageNumber}"]`) as HTMLElement
 			if (pageElement) {
-				pageElement.scrollIntoView({ behavior: "smooth", block: "start" })
+				isScrollingRef.current = true
+				if (scrollTimeoutRef.current) {
+					clearTimeout(scrollTimeoutRef.current)
+				}
+				
 				usePDFZustand.setState({ currentPage: pageNumber })
+				pageElement.scrollIntoView({ behavior: "smooth", block: "start" })
+				
+				scrollTimeoutRef.current = setTimeout(() => {
+					isScrollingRef.current = false
+				}, 1000)
 			}
 		},
 		[pages]
@@ -94,6 +106,54 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 					toggleFitMode()
 				},
 				priority: 10,
+			},
+
+			{
+				key: "arrowup",
+				handler: e => {
+					const current = usePDFZustand.getState().currentPage
+					if (isInputFocused()) {
+						return
+					}
+
+					e.preventDefault()
+					
+					if (current < 1 || current > pages) {
+						return
+					}
+
+					const targetPage = current - 1
+					if (targetPage < 1 || targetPage > pages) {
+						return
+					}
+
+					scrollToPage(targetPage)
+				},
+				priority: 8,
+			},
+
+			{
+				key: "arrowdown",
+				handler: e => {
+					const current = usePDFZustand.getState().currentPage
+					if (isInputFocused()) {
+						return
+					}
+
+					e.preventDefault()
+					
+					if (current < 1 || current > pages) {
+						return
+					}
+
+					const targetPage = current + 1
+					if (targetPage < 1 || targetPage > pages) {
+						return
+					}
+
+					scrollToPage(targetPage)
+				},
+				priority: 8,
 			},
 
 			...Array.from({ length: 10 }, (_, i) => ({
@@ -142,17 +202,29 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 			if (inputTimeoutRef.current) {
 				clearTimeout(inputTimeoutRef.current)
 			}
+			if (scrollTimeoutRef.current) {
+				clearTimeout(scrollTimeoutRef.current)
+			}
 		}
 	}, [])
 
 	useEffect(() => {
-		if (!rootRef.current) {
+		if (!rootRef.current || pages === 0) {
 			return
 		}
 		const container = rootRef.current
 		const elems = Array.from(container.querySelectorAll<HTMLElement>("[data-page]"))
+		
+		if (elems.length === 0) {
+			return
+		}
+		
 		const observer = new IntersectionObserver(
 			entries => {
+				if (isScrollingRef.current) {
+					return
+				}
+				
 				let maxRatio = 0
 				let page: number | null = null
 				for (const entry of entries) {
@@ -174,7 +246,7 @@ export const PDFCanvas = (props: { pdf: File | string }) => {
 		return () => {
 			observer.disconnect()
 		}
-	}, [])
+	}, [pages])
 
 	const onLoadSuccess = (input: { numPages: number }) => {
 		setPages(input.numPages)
