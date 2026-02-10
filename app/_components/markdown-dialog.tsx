@@ -93,6 +93,10 @@ export const MarkdownDialog = ({ totalPages }: Props) => {
 			return
 		}
 
+		if (isConverting) {
+			return
+		}
+
 		const convert = async () => {
 			setIsConverting(true)
 			try {
@@ -133,7 +137,7 @@ export const MarkdownDialog = ({ totalPages }: Props) => {
 		}
 
 		convert()
-	}, [open, pdf, markdownContent, totalPages, setIsConverting, setMarkdownContent, setMarkdownCost, setOpen])
+	}, [open, pdf, markdownContent, totalPages, setIsConverting, setMarkdownContent, setMarkdownCost, setOpen, isConverting])
 
 	useKeyboardShortcuts(
 		[
