@@ -7,26 +7,6 @@ const pdfjsDistPath = path.dirname(require.resolve("pdfjs-dist/package.json"))
 const cMapsDir = path.join(pdfjsDistPath, "cmaps")
 
 const nextConfig: NextConfig = {
-	experimental: {
-		turbo: {
-			resolveAlias: {
-				canvas: "./empty-module.ts",
-			},
-		},
-	},
-	eslint: {
-		ignoreDuringBuilds: true,
-	},
-	plugins: [
-		new CopyWebpackPlugin({
-			patterns: [
-				{
-					from: cMapsDir,
-					to: "cmaps/",
-				},
-			],
-		}),
-	],
 	// biome-ignore lint/suspicious/useAwait: Has to be async
 	async rewrites() {
 		return [
@@ -41,6 +21,24 @@ const nextConfig: NextConfig = {
 		]
 	},
 	skipTrailingSlashRedirect: true,
+	turbopack: {
+		resolveAlias: {
+			canvas: "./empty-module.ts",
+		},
+	},
+	webpack: config => {
+		config.plugins.push(
+			new CopyWebpackPlugin({
+				patterns: [
+					{
+						from: cMapsDir,
+						to: "cmaps/",
+					},
+				],
+			})
+		)
+		return config
+	},
 }
 
 export default nextConfig
