@@ -6,8 +6,8 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
+import { convertPdfPageToMarkdown } from "@/lib/api/convert-pdf-page-client"
 import { usePDFZustand } from "@/zustand/pdf-zustand"
-import { convertPdfPageToMarkdown } from "../actions/convert-pdf-to-markdown"
 
 async function processPagesParallel(base64Pages: string[], onUpdate: (results: ({ markdown: string; cost: number } | null)[]) => void) {
 	const results: ({ markdown: string; cost: number } | null)[] = new Array(base64Pages.length).fill(null)
@@ -16,7 +16,7 @@ async function processPagesParallel(base64Pages: string[], onUpdate: (results: (
 		base64Pages.map(async (page, index) => {
 			try {
 				const result = await convertPdfPageToMarkdown(page)
-				if (result.success && result.markdown) {
+				if (result.success) {
 					results[index] = { markdown: result.markdown, cost: result.cost || 0 }
 				} else {
 					results[index] = { markdown: `[Error converting page ${index + 1}: ${result.error || "Unknown error"}]`, cost: 0 }

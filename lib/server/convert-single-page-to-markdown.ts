@@ -1,5 +1,4 @@
-"use server"
-
+import "server-only"
 import { generateText } from "ai"
 
 const systemPrompt = `Convert this PDF page to markdown. Extract all text accurately, preserve formatting, structure, headings, lists, and tables.
@@ -13,7 +12,12 @@ HTML: Don't output HTML inside markdown; use only pure markdown syntax for forma
 
 Final Output: Only return the actual content from the PDF.`
 
-async function convertSinglePageToMarkdown(base64PagePdf: string): Promise<{ markdown: string; cost?: number }> {
+type ConvertSinglePageResult = {
+	markdown: string
+	cost?: number
+}
+
+export async function convertSinglePageToMarkdown(base64PagePdf: string): Promise<ConvertSinglePageResult> {
 	const result = await generateText({
 		model: "gemini-2.5-flash-lite",
 		messages: [
@@ -58,21 +62,5 @@ async function convertSinglePageToMarkdown(base64PagePdf: string): Promise<{ mar
 	return {
 		markdown: markdown.trim(),
 		cost,
-	}
-}
-
-export async function convertPdfPageToMarkdown(base64Page: string): Promise<{ success: boolean; markdown?: string; error?: string; cost?: number }> {
-	try {
-		const result = await convertSinglePageToMarkdown(base64Page)
-		return {
-			success: true,
-			markdown: result.markdown,
-			cost: result.cost,
-		}
-	} catch (error) {
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : "Failed to convert page",
-		}
 	}
 }
